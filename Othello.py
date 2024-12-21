@@ -16,9 +16,6 @@ class Player:
         self.name = name
         self.select = select
         self.availablemove = {}
-
-    def add(self, move):
-        self.availablemove.update({move})
         
 
 #Child Class: Pieces
@@ -31,10 +28,10 @@ class Pieces(Player):
 #Creates the board with the center pieces already filled
 def create_board():
     board = np.zeros((ROW_COUNT,COLUMN_COUNT))
-    board[3][3] = 1
-    board[3][4] = 2
-    board[4][3] = 2
-    board[4][4] = 1
+    board[3][3] = 2
+    board[3][4] = 1
+    board[4][3] = 1
+    board[4][4] = 2
     return board
 
 def valid(board, positionx, positiony, player):
@@ -74,13 +71,23 @@ def valid(board, positionx, positiony, player):
     #    return True
     return False
 
+def update_all_valid_moves(board, player1, player2):
+    player1.availablemove.clear()
+    player2.availablemove.clear()
+    for row in range(ROW_COUNT):
+        for col in range(COLUMN_COUNT):
+            if valid(board, row, col, player1):
+                player1.availablemove[(row, col)] = True
+            if valid(board, row, col, player2):
+                player2.availablemove[(row, col)] = True
+
+
 #Places piece where user defined
-def drop_piece(board, row, col, player):
+def drop_piece(board, row, col, player, opponent):
     board[row][col] = player.select
 
     #Adds one to score to include the piece being played
     player.score += 1
-
 
 #Checks around to see what can be flipped
 def flip(board, row, col, player, opponent):   
@@ -110,7 +117,7 @@ def flip(board, row, col, player, opponent):
                         #Adds one to player and subtracts one from opponent with each piece being flipped
                         player.score += 1
                         opponent.score -= 1
-                        break
+                    break
 
                 #If neither condition is found, breaks out of the loop early and continues to check around the original piece
                 else:
@@ -123,15 +130,14 @@ def flip(board, row, col, player, opponent):
 
 
 #Needs to check board state to see if either the board is full or if there is no more valid moves, then triggers game over condition
-def checkBoard(board):
-    for i in range(ROW_COUNT):
-        for j in range(COLUMN_COUNT):
-            if board[i,j] == 0:
-                return True
-    return False
+def checkBoard(player1, player2):
+    if player1.score == 0 or player2.score == 0:
+        return False
 
-
+    if player1.availablemove or player2.availablemove:
+        return True
     
+    return False   
 
 def main():
     #pygame.init()
@@ -170,19 +176,24 @@ def main():
         print(Player_2.name)
         print(Player_2.select)
         name = input("What is your name?")
-        Player_1 = Player(name, 1, 2)
+        Player_1 = Player(name, 1)
 
     Player_1.score = Player_2.score = 2
     
     print(board)
     while not game_over:
+        update_all_valid_moves(board, Player_1, Player_2)
+        if not checkBoard(Player_1, Player_2):
+            game_over = True
+            print("Game Over")
+            break
         if turn == 0:
             while True:
                 col = int(input(f"{Player_1.name}:"))
                 row = int(input(f"{Player_1.name}:"))
 
                 if valid(board, row, col, Player_1):
-                    drop_piece(board, row, col, Player_1)
+                    drop_piece(board, row, col, Player_1, Player_2)
                     flip(board, row, col, Player_1, Player_2)
                     break
                 print("Invalid Move. Please Choose a Different Spot")
@@ -193,11 +204,12 @@ def main():
                 row = int(input(f"{Player_2.name}:"))
 
                 if valid(board, row, col, Player_2):
-                    drop_piece(board, row, col, Player_2)
+                    drop_piece(board, row, col, Player_2, Player_1)
                     flip(board,  row, col, Player_2, Player_1)
                     break
                 print("Invalid Move. Please Choose a Different Spot")
                 continue
+
         print(board)
         print(Player_1.score)
         print(Player_2.score)
